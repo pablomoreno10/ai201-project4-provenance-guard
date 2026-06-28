@@ -50,6 +50,7 @@ Detection Signals & Combination Logic
         - Output format: A float value between 0.0 and 1.0. We calculate the text's actual variance and map it: very low variance yields a score near 1.0 (likely AI), while high variance yields a score near 0.0 (likely human since it is more chaotic).
 
     Combination Formula Final Score = (Signal 1 * 0.55) + (Signal 2 * 0.45)
+    Changed Combination Formula Final Score = (Signal 1 * 0.6) + (Signal 2 * 0.4) - I changed it because signal 2 had too much influence on the final score considering its relevance.
 
 Uncertainty Representation & Thresholds
 

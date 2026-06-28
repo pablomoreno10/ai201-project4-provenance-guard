@@ -59,6 +59,37 @@ def analyze_semantic_signal(text):
         return 0.5
 
 
+# --- Signal 2: Stylometric Sentence Length Variance ---
+
+def calculate_stylometric_variance(text):
+    """
+    Splits text into sentences, counts words per sentence, and computes variance.
+    Maps variance to a 0.0 (high variance / human) to 1.0 (low variance / AI) scale.
+    Returns 0.5 as a neutral fallback for inputs too short to analyze reliably.
+    """
+    # Split on sentence-ending punctuation while keeping the delimiter attached
+    import re
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sentences = [s for s in sentences if s.strip()]
+
+    # Not enough sentences to compute meaningful variance — return neutral score
+    if len(sentences) < 2:
+        return 0.5
+
+    word_counts = [len(s.split()) for s in sentences]
+    n = len(word_counts)
+    mean = sum(word_counts) / n
+    variance = sum((c - mean) ** 2 for c in word_counts) / n
+
+    # Normalize: clamp raw variance against a practical ceiling (100 word^2)
+    # so that very long texts don't produce outlier floats.
+    MAX_VARIANCE = 100.0
+    normalized_variance = min(variance, MAX_VARIANCE) / MAX_VARIANCE
+
+    # Invert: high variance → low score (human); low variance → high score (AI)
+    return round(1.0 - normalized_variance, 4)
+
+
 # --- Audit Log Helpers --- verified
 
 def read_audit_log():
@@ -94,13 +125,26 @@ def submit():
     # Generate a unique identifier for this submission - verified
     content_id = str(uuid.uuid4())
 
-    # Signal 1: LLM semantic score - verified
+    # Signal 1: LLM semantic score
     llm_score = analyze_semantic_signal(text)
-    print(f"[DEBUG] Raw Groq LLM score for content_id {content_id}: {llm_score}")
+    print(f"[DEBUG] Groq LLM score:        {llm_score}")
 
-    # Milestone 3 placeholders — Signal 2 and full scoring added in Milestone 4
-    confidence = llm_score
-    attribution = "likely_ai" if confidence > 0.50 else "likely_human"
+    # Signal 2: Stylometric variance score
+    stylometric_score = calculate_stylometric_variance(text)
+    print(f"[DEBUG] Stylometric score:     {stylometric_score}")
+
+    # Weighted combination formula: Final = (LLM * 0.6) + (Stylometric * 0.4)
+    confidence = round((llm_score * 0.6) + (stylometric_score * 0.4), 4)
+    print(f"[DEBUG] Combined confidence:   {confidence}")
+
+    # Threshold-based attribution
+    if confidence <= 0.39:
+        attribution = "likely_human"
+    elif confidence <= 0.70:
+        attribution = "uncertain"
+    else:
+        attribution = "likely_ai"
+
     label = "PLACEHOLDER_LABEL"
 
     # Build and persist the audit log entry
@@ -111,6 +155,7 @@ def submit():
         "attribution": attribution,
         "confidence": confidence,
         "llm_score": llm_score,
+        "stylometric_score": stylometric_score,
         "status": "classified",
     }
 
@@ -122,6 +167,8 @@ def submit():
         "content_id": content_id,
         "attribution": attribution,
         "confidence": confidence,
+        "llm_score": llm_score,
+        "stylometric_score": stylometric_score,
         "label": label,
     }), 200
 
