@@ -1,0 +1,20 @@
+[
+  {
+    "content_id": "daa4e2c0-4fd5-4622-9b95-be9b8eeba11c",
+    "creator_id": "user_001",
+    "timestamp": "2026-06-28T20:37:58.703734+00:00",
+    "attribution": "likely_ai",
+    "confidence": 0.73,
+    "llm_score": 0.73,
+    "status": "classified"
+  },
+  {
+    "content_id": "1ba3cf0f-6c43-4ea3-83ee-357181c67756",
+    "creator_id": "test-user-1",
+    "timestamp": "2026-06-28T21:07:39.635362+00:00",
+    "attribution": "likely_ai",
+    "confidence": 0.62,
+    "llm_score": 0.62,
+    "status": "classified"
+  }
+]
