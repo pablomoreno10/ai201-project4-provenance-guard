@@ -4,12 +4,21 @@ import json
 from datetime import datetime, timezone
 
 from flask import Flask, request, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
 
 app = Flask(__name__)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri="memory://",
+    default_limits=[],
+)
 
 AUDIT_LOG_PATH = "audit_log.json"
 
@@ -59,7 +68,7 @@ def analyze_semantic_signal(text):
         return 0.5
 
 
-# --- Signal 2: Stylometric Sentence Length Variance ---
+# --- Signal 2: Stylometric Sentence Length Variance --- 
 
 def calculate_stylometric_variance(text):
     """
@@ -90,6 +99,18 @@ def calculate_stylometric_variance(text):
     return round(1.0 - normalized_variance, 4)
 
 
+# --- Transparency Label ---
+
+def get_transparency_label(confidence):
+    """Returns the exact user-facing label string based on the final confidence score."""
+    if confidence <= 0.39:
+        return "Human Generated: This content matches natural human writing patterns with high structural diversity and authenticity."
+    elif confidence <= 0.70:
+        return "Unverified Attribution: This text exhibits mixed stylistic patterns, combining automated uniformity with creative variation."
+    else:
+        return "AI-Generated: This content displays high predictability and structural regularity characteristic of automated text models."
+
+
 # --- Audit Log Helpers --- verified
 
 def read_audit_log():
@@ -109,6 +130,7 @@ def write_audit_log(entries):
 # --- Routes --- verified
 
 @app.route("/submit", methods=["POST"])
+@limiter.limit("100 per day;10 per minute")
 def submit():
     """
     Accepts JSON: {"text": str, "creator_id": str}
@@ -145,7 +167,7 @@ def submit():
     else:
         attribution = "likely_ai"
 
-    label = "PLACEHOLDER_LABEL"
+    label = get_transparency_label(confidence)
 
     # Build and persist the audit log entry
     log_entry = {
@@ -171,6 +193,37 @@ def submit():
         "stylometric_score": stylometric_score,
         "label": label,
     }), 200
+
+
+@app.route("/appeal", methods=["POST"])
+def appeal():
+    """
+    Accepts JSON: {"content_id": str, "creator_reasoning": str}
+    Finds the matching audit log entry, flips its status to "under_review",
+    and appends the creator's reasoning and an appealed_at timestamp.
+    """
+    data = request.get_json(silent=True)
+
+    if not data or "content_id" not in data or "creator_reasoning" not in data:
+        return jsonify({"error": "Request body must include 'content_id' and 'creator_reasoning'."}), 400
+
+    content_id = data["content_id"]
+    creator_reasoning = data["creator_reasoning"]
+
+    entries = read_audit_log()
+
+    for entry in entries:
+        if entry.get("content_id") == content_id:
+            entry["status"] = "under_review"
+            entry["creator_reasoning"] = creator_reasoning
+            entry["appealed_at"] = datetime.now(timezone.utc).isoformat()
+            write_audit_log(entries)
+            return jsonify({
+                "message": "Appeal received. Entry is now under review.",
+                "content_id": content_id,
+            }), 200
+
+    return jsonify({"error": f"No entry found for content_id: {content_id}"}), 404
 
 
 @app.route("/log", methods=["GET"])
