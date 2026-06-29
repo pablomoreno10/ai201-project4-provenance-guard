@@ -323,7 +323,8 @@ I used the AI to help develop the planning.md before writing any code. Crucially
 
 ## Portfolio Walkthrough
 
-[Loom walkthrough — link coming soon]
+[[[Loom walkthrough — link coming soon]](https://www.loom.com/share/18f41f97464344038db05a3dac909f6f)
+](https://www.loom.com/share/18f41f97464344038db05a3dac909f6f)
 
 A short end-to-end demo covering: submitting texts across all three classification outcomes, reading the audit log, filing an appeal and confirming the status update, and hitting the rate limit.
 
