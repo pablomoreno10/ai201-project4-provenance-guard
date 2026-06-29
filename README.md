@@ -34,7 +34,6 @@ When a text is submitted via `POST /submit`, the application routes the raw text
 config:
   theme: redux
   look: classic
-  fontFamily: 'Open Sans Variable', sans-serif
   layout: dagre
 ---
 flowchart LR
